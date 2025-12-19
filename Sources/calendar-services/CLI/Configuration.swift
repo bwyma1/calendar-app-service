@@ -4,6 +4,7 @@ import ArgumentParser
 import RAW
 import RAW_dh25519
 import RAW_base64
+import NIO
 import bedrock
 import wireguard_userspace_nio
 
@@ -66,33 +67,36 @@ extension CLI {
 				abstract:"a subcommand for adding a peer to the configuration file."
 			)
 			
+			@Option(help:"the path to the configuration directory, defaults to the user's home directory")
+			var configurationPath:bedrock.Path = Path(FileManager.default.homeDirectoryForCurrentUser.path)
 			@Option(help:"If true, will overwrite the current public key if it exists.")
 			var overwrite:Bool = false
+			@Option(help: "The IP address of the responder.")
+			var ipAddress:String? = nil
+			@Option(help: "The port number of the peer.")
+			var port:Int? = nil
+			@Option(help: "The internal keep-alive time of the peer (seconds).")
+			var keepAlive:Int64? = nil
 			
 			@Argument(help: "The public key of the peer.")
 			var publicKey:PublicKey
-			@Argument(help: "The IP address of the responder.")
-			var ipAddress:String
-			@Argument(help: "The port number of the peer.")
-			var port:Int
-			@Argument(help: "The internal keep-alive time of the peer (seconds).")
-			var keepAlive:Int64
+			
 			
 			func run() async throws {
 				var logger = Logger(label: "configuration")
-				let homeDirectory = Path(FileManager.default.homeDirectoryForCurrentUser.path)
-				let configurationURL = URL(fileURLWithPath: homeDirectory.appendingPathComponent("peer-config.json").path())
+				let configurationURL = URL(fileURLWithPath: configurationPath.appendingPathComponent("peer-config.json").path())
 				logger[metadataKey:"public-key"] = "\(String(describing:publicKey))"
+				let keepAliveTime:TimeAmount? = keepAlive == nil ? nil : .seconds(keepAlive!)
 				try editConfig(at: configurationURL) { cfg in
 					if let existingIndex = cfg.peers.firstIndex(where: { $0.publicKey == publicKey }) {
 						if overwrite {
-							cfg.peers[existingIndex] = PeerInfo(publicKey:publicKey, ipAddress: ipAddress, port:port, internalKeepAlive:.seconds(keepAlive), inboundData: nil)
+							cfg.peers[existingIndex] = PeerInfo(publicKey:publicKey, ipAddress: ipAddress, port:port, internalKeepAlive:keepAliveTime, inboundData: nil)
 							logger.info("Overwriting peer in configuration")
 						} else {
 							logger.info("Peer already exists in configuration")
 						}
 					} else {
-						cfg.peers.append(PeerInfo(publicKey:publicKey, ipAddress: ipAddress, port:port, internalKeepAlive:.seconds(keepAlive), inboundData: nil))
+						cfg.peers.append(PeerInfo(publicKey:publicKey, ipAddress: ipAddress, port:port, internalKeepAlive:keepAliveTime, inboundData: nil))
 						logger.info("Adding peer to configuration")
 					}
 				}
@@ -105,14 +109,15 @@ extension CLI {
 				abstract: "a subcommand for removing a peer from the configuration file"
 			)
 
+			@Option(help:"the path to the configuration directory, defaults to the user's home directory")
+			var configurationPath:bedrock.Path = Path(FileManager.default.homeDirectoryForCurrentUser.path)
 			@Argument(help: "The public key of the peer to delete.")
 			var publicKey: PublicKey
 
 			func run() async throws {
 				var logger = Logger(label: "configuration")
 				
-				let homeDirectory = Path(FileManager.default.homeDirectoryForCurrentUser.path)
-				let configurationURL = URL(fileURLWithPath: homeDirectory.appendingPathComponent("peer-config.json").path())
+				let configurationURL = URL(fileURLWithPath: configurationPath.appendingPathComponent("peer-config.json").path())
 				logger[metadataKey:"public-key"] = "\(String(describing:publicKey))"
 				try editConfig(at: configurationURL) { cfg in
 					let beforeCount = cfg.peers.count
@@ -132,11 +137,13 @@ extension CLI {
 				commandName: "list",
 				abstract: "lists the current peer configuration"
 			)
+			
+			@Option(help:"the path to the configuration directory, defaults to the user's home directory")
+			var configurationPath:bedrock.Path = Path(FileManager.default.homeDirectoryForCurrentUser.path)
 
 			func run() async throws {
 				let logger = Logger(label: "configuration")
-				let homeDirectory = Path(FileManager.default.homeDirectoryForCurrentUser.path)
-				let configurationURL = URL(fileURLWithPath: homeDirectory.appendingPathComponent("peer-config.json").path())
+				let configurationURL = URL(fileURLWithPath: configurationPath.appendingPathComponent("peer-config.json").path())
 
 				let cfg = try loadConfig(from: configurationURL)
 				for peer in cfg.peers {
@@ -150,11 +157,13 @@ extension CLI {
 				commandName: "clear",
 				abstract: "READ BEFORE USING: A subcommand for clearing the entire configuration file"
 			)
+			
+			@Option(help:"the path to the configuration directory, defaults to the user's home directory")
+			var configurationPath:bedrock.Path = Path(FileManager.default.homeDirectoryForCurrentUser.path)
 
 			func run() async throws {
 				let logger = Logger(label: "configuration")
-				let homeDirectory = Path(FileManager.default.homeDirectoryForCurrentUser.path)
-				let configurationURL = URL(fileURLWithPath: homeDirectory.appendingPathComponent("peer-config.json").path())
+				let configurationURL = URL(fileURLWithPath: configurationPath.appendingPathComponent("peer-config.json").path())
 				let emptyConfig = AppConfig()
 				let encoder = JSONEncoder()
 				encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -169,11 +178,13 @@ extension CLI {
 				commandName: "delete",
 				abstract: "deletes the current peer configuration file"
 			)
+			
+			@Option(help:"the path to the configuration directory, defaults to the user's home directory")
+			var configurationPath:bedrock.Path = Path(FileManager.default.homeDirectoryForCurrentUser.path)
 
 			func run() async throws {
 				let logger = Logger(label: "configuration")
-				let homeDirectory = Path(FileManager.default.homeDirectoryForCurrentUser.path)
-				let configurationURL = URL(fileURLWithPath: homeDirectory.appendingPathComponent("peer-config.json").path())
+				let configurationURL = URL(fileURLWithPath: configurationPath.appendingPathComponent("peer-config.json").path())
 				try FileManager.default.removeItem(at: configurationURL)
 				logger.info("Successfully cleared the configuration file")
 			}

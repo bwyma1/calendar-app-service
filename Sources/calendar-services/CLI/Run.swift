@@ -51,7 +51,7 @@ struct CLI:AsyncParsableCommand {
 		@Option(help:"the path to the database directory, defaults to the user's home directory")
 		var databasePath:bedrock.Path = CLI.defaultDBBasePath()
 		@Option(help:"the path to the configuration directory, defaults to the user's home directory")
-		var configurationPath:bedrock.Path = CLI.defaultDBBasePath()
+		var configurationPath:bedrock.Path = Path(FileManager.default.homeDirectoryForCurrentUser.path)
 
 		@Argument(help: "The port number that I am is listening on.")
 		var myPort:Int

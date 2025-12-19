@@ -25,7 +25,7 @@ let package = Package(
 		.package(url:"https://github.com/tannerdsilva/QuickLMDB.git", "14.0.0"..<"15.0.0"),
 //		.package(path:"../nostr-kit-swift"),
 		.package(url:"https://github.com/bwyma1/nostr-kit-swift", revision:"a8072a1bee5bc7541a8b5375b1aa0e4b370665c4"),
-		.package(url:"https://github.com/tannerdsilva/wireguard-swift", revision:"082c17b60c4a31b13fb0c36bba921953f47ae22f"),
+		.package(url:"https://github.com/tannerdsilva/wireguard-swift", revision:"f015dfe134763a1daa460c623b3c0b8bcb6fcd97"),
 //		.package(path:"../wireguard-swift"),
 
 		.package(url:"https://github.com/apple/swift-nio.git", "2.81.0"..<"3.0.0"),

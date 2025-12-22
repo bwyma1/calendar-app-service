@@ -40,12 +40,17 @@ extension NOSTR_id {
 public func eventMatchesFilters(_ event: NOSTR_event_signed<UnsignedEvent<CalendarEventContent>>, filters: [Filter], logLevel: Logger.Level) -> Bool {
 	var logger = Logger(label: "filter")
 	logger.logLevel = logLevel
+	guard !filters.isEmpty else {
+		return true
+	}
 	for filter in filters {
 		// make sure each filter tag is in the event tags
+		var hasTags: Bool = true
 		for tag in filter.tags {
 			guard event.unsignedEvent.tags.contains(where: { eventTag in
 				tag.isEqual(to: eventTag)
 			}) else {
+				hasTags = false
 				continue
 			}
 		}
@@ -53,7 +58,8 @@ public func eventMatchesFilters(_ event: NOSTR_event_signed<UnsignedEvent<Calend
 		   (filter.authors == [] || filter.authors.contains(event.unsignedEvent.publicKey)) &&
 		   (filter.kinds == [] || filter.kinds.contains(event.unsignedEvent.kind)) &&
 		   (filter.since == nil || filter.since! <= event.unsignedEvent.date) &&
-		   (filter.until == nil || filter.until! >= event.unsignedEvent.date)) {
+		   (filter.until == nil || filter.until! >= event.unsignedEvent.date) &&
+		   hasTags) {
 			logger.trace("Found event that matches at least one filter", metadata: ["event_id": "\(String(describing: event.unsignedEvent.id))"])
 			return true
 		}

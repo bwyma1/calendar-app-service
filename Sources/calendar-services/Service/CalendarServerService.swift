@@ -117,7 +117,8 @@ final class CalendarServerService: Service {
 									case .REQ(let request):
 										cliLogger.debug("Processing REQ Message")
 										await nostrRequests.set(request, for: peerInfo.publicKey)
-										let events = try eventDB.filterEvents(filter: request.filters)
+										var events:[NOSTR_event_signed<UnsignedEvent<CalendarEventContent>>] = try eventDB.filterEvents(filter: request.filters)
+										events.sort { $0.unsignedEvent.kind.RAW_native() < $1.unsignedEvent.kind.RAW_native() }
 										for event in events {
 											var eventLength = 0; event.RAW_encode(count: &eventLength)
 											buffer.withUnsafeMutableWritableBytes { ptr in

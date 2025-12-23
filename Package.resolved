@@ -1,5 +1,5 @@
 {
-  "originHash" : "73931c5693c161c4a18c4d80e10a2d95cc3c4b94399a7a1c634ecb0f6d2cce36",
+  "originHash" : "5f54e5a73714d74fc8a7e7a19425dd18bcf3b4c97a9330e781bfc58cf0a32157",
   "pins" : [
     {
       "identity" : "bedrock",
@@ -17,14 +17,6 @@
       "state" : {
         "revision" : "4ce5826424f8e65f395efc5b4c611479384722b1",
         "version" : "0.9.30"
-      }
-    },
-    {
-      "identity" : "nostr-kit-swift",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/bwyma1/nostr-kit-swift",
-      "state" : {
-        "revision" : "a8072a1bee5bc7541a8b5375b1aa0e4b370665c4"
       }
     },
     {

@@ -43,6 +43,9 @@ public func eventMatchesFilters(_ event: NOSTR_event_signed<UnsignedEvent<Calend
 	guard !filters.isEmpty else {
 		return true
 	}
+	guard event.unsignedEvent.kind.RAW_native() != 5 else {
+		return true
+	}
 	for filter in filters {
 		// make sure each filter tag is in the event tags
 		var hasTags: Bool = true

@@ -23,10 +23,8 @@ let package = Package(
 //		.package(url:"https://github.com/tannerdsilva/rawdog.git", "20.0.0"..<"21.0.0"),
 		.package(url:"https://github.com/tannerdsilva/rawdog.git", revision: "1c4966c72102fc01b169cbc18ee5f0be10d802de"),
 		.package(url:"https://github.com/tannerdsilva/QuickLMDB.git", "14.0.0"..<"15.0.0"),
-		.package(path:"../nostr-kit-swift"),
-//		.package(url:"https://github.com/bwyma1/nostr-kit-swift", revision:"a8072a1bee5bc7541a8b5375b1aa0e4b370665c4"),
+		.package(url:"https://github.com/bwyma1/nostr-kit-swift", revision:"546041d7933ff801f3b28ebaf0357a41471a2c24"),
 		.package(url:"https://github.com/tannerdsilva/wireguard-swift", revision:"0eb24a67c30a5178526383ca5210b41f6b1e48c9"),
-//		.package(path:"../wireguard-swift"),
 
 		.package(url:"https://github.com/apple/swift-nio.git", "2.81.0"..<"3.0.0"),
 		.package(url:"https://github.com/tannerdsilva/bedrock.git", "7.1.0"..<"8.0.0"),

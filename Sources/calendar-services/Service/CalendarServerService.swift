@@ -89,13 +89,21 @@ final class CalendarServerService: Service {
 							if let incomingSignal = try await iterator?.next(whenTaskCancelled: .finish) {
 								cliLogger.debug("Received incoming data. Checking for NOSTR messages.")
 								var message:NOSTR_message<UnsignedEvent<CalendarEventContent>>?
+								var memberMessage:NOSTR_message<UnsignedEvent<MemberContent>>?
 								incomingSignal.withUnsafeReadableBytes { ptr in
-									// Try EVENT Message
+									// Try calendar EVENT Message
 									do {
 										guard let event = NOSTR_message_EVENT<UnsignedEvent<CalendarEventContent>>(RAW_decode: ptr.baseAddress!, count: ptr.count) else {
 											throw NOSTR_message_error.badDecode
 										}
 										message = .EVENT(event)
+									} catch { }
+									// Try member EVENT Message
+									do {
+										guard let event = NOSTR_message_EVENT<UnsignedEvent<MemberContent>>(RAW_decode: ptr.baseAddress!, count: ptr.count) else {
+											throw NOSTR_message_error.badDecode
+										}
+										memberMessage = .EVENT(event)
 									} catch { }
 									// Try REQ Message
 									do {
@@ -117,9 +125,24 @@ final class CalendarServerService: Service {
 									case .REQ(let request):
 										cliLogger.debug("Processing REQ Message")
 										await nostrRequests.set(request, for: peerInfo.publicKey)
-										var events:[NOSTR_event_signed<UnsignedEvent<CalendarEventContent>>] = try eventDB.filterEvents(filter: request.filters)
-										events.sort { $0.unsignedEvent.kind.RAW_native() < $1.unsignedEvent.kind.RAW_native() }
-										for event in events {
+										
+										var memberEvents:[NOSTR_event_signed<UnsignedEvent<MemberContent>>] = try eventDB.filterMemberEvents(filter: request.filters)
+										memberEvents.sort { $0.unsignedEvent.kind.RAW_native() < $1.unsignedEvent.kind.RAW_native() }
+										for event in memberEvents {
+											var eventLength = 0; event.RAW_encode(count: &eventLength)
+											buffer.withUnsafeMutableWritableBytes { ptr in
+												guard let base = ptr.baseAddress else { return }
+												let ptr = base.assumingMemoryBound(to: UInt8.self)
+												_ = event.RAW_encode(dest: ptr)
+											}
+											buffer.moveWriterIndex(forwardBy: eventLength)
+											try WGInterface<KCPChannels>.write(channel: channel, publicKey: peerInfo.publicKey, data: buffer)
+											buffer.clear(minimumCapacity: 1024)
+										}
+										
+										var calendarEvents:[NOSTR_event_signed<UnsignedEvent<CalendarEventContent>>] = try eventDB.filterCalendarEvents(filter: request.filters)
+										calendarEvents.sort { $0.unsignedEvent.kind.RAW_native() < $1.unsignedEvent.kind.RAW_native() }
+										for event in calendarEvents {
 											var eventLength = 0; event.RAW_encode(count: &eventLength)
 											buffer.withUnsafeMutableWritableBytes { ptr in
 												guard let base = ptr.baseAddress else { return }
@@ -136,7 +159,7 @@ final class CalendarServerService: Service {
 										guard event.isValidSignature() else {
 											break
 										}
-										try eventDB.scribeNewEvent(signedEvent: event, logLevel: cliLogger.logLevel)
+										try eventDB.scribeNewCalendarEvent(signedEvent: event, logLevel: cliLogger.logLevel)
 										// Send event to all active requests that need it
 										let requests = await nostrRequests.all()
 										for (key, request) in requests {
@@ -157,6 +180,32 @@ final class CalendarServerService: Service {
 										await nostrRequests.remove(peerInfo.publicKey)
 									case nil:
 										cliLogger.debug("Incoming data didn't match any NOSTR Message type. Ignoring.")
+										break
+								}
+								switch memberMessage {
+									case .EVENT(let eventMsg):
+										cliLogger.debug("Processing EVENT Message")
+										let event = eventMsg.event
+										guard event.isValidSignature() else {
+											break
+										}
+										try eventDB.scribeNewMemberEvent(signedEvent: event, logLevel: cliLogger.logLevel)
+										// Send event to all active requests that need it
+										let requests = await nostrRequests.all()
+										for (key, request) in requests {
+											if(eventMatchesFilters(event, filters: request.filters, logLevel: cliLogger.logLevel)) {
+												var eventLength = 0; event.RAW_encode(count: &eventLength)
+												buffer.withUnsafeMutableWritableBytes { ptr in
+													guard let base = ptr.baseAddress else { return }
+													let ptr = base.assumingMemoryBound(to: UInt8.self)
+													_ = event.RAW_encode(dest: ptr)
+												}
+												buffer.moveWriterIndex(forwardBy: eventLength)
+												try WGInterface<KCPChannels>.write(channel: channel, publicKey: key, data: buffer)
+												buffer.clear(minimumCapacity: 1024)
+											}
+										}
+									default:
 										break
 								}
 							}
